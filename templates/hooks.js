@@ -1,7 +1,5 @@
 'use strict';
 
-const fs = require('fs');
-
 exports.id = 'ti.karma';
 exports.init = (logger, config, cli) => {
 	[ 'build.android.copyResource', 'build.ios.copyResource' ].forEach(copyHookName => {
@@ -62,12 +60,19 @@ exports.init = (logger, config, cli) => {
 	cli.on('build.pre.compile', {
 		priority: 99999,
 		post: (_, done) => {
+			const modulePath = require.resolve('fs-extra', { paths: [ cli.env.getSDK().path ] });
+			// eslint-disable-next-line security/detect-non-literal-require
+			const fs = require(modulePath);
 			const karmaClientDestPath = '__KARMA_CLIENT_DEST__';
 			if (fs.existsSync(karmaClientDestPath)) {
 				return done();
 			}
 
-			fs.symlink('__KARMA_CLIENT_SRC__', karmaClientDestPath, done);
+			if (process.platform === 'win32') {
+				fs.copy('__KARMA_CLIENT_SRC__', karmaClientDestPath, done);
+			} else {
+				fs.symlink('__KARMA_CLIENT_SRC__', karmaClientDestPath, done);
+			}
 		}
 	});
 };
